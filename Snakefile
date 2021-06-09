@@ -43,17 +43,31 @@ bbduk_container = 'shub://TomHarrop/singularity-containers:bbmap_38.00'
 
 rule target:
     input:
-        ##BUSCO
-        expand('output/busco/{not_hic_species}/run_hymenoptera_odb10/full_table.tsv', not_hic_species=['MO', 'FR']),
-        ##GC
-        expand('output/bb_stats/{species}/gc.txt', species=all_species),
         ##Depth
         expand('output/samtools_depth/{species}/depth.out', species=all_species),
         ##Coverage
         expand('output/samtools_coverage/{species}/coverage.out', species=all_species),
         ##GC content plots
-        #expand('output/bbstats/hic/{hic_species}_all_gc_boxplot.pdf', hic_species=['Mh', 'FR']),
-        #expand('output/bbstats/not_hic/{not_hic_species}_all_gc_boxplot.pdf', not_hic_species=['MO', 'IR'])
+        expand('output/gc_depth/{hic_species}/hic_gc_boxplot.pdf', hic_species=['Mh', 'IR']),
+        expand('output/gc_depth/{not_hic_species}/busco_gc_boxplot.pdf', not_hic_species=['MO', 'FR']),
+        ##GC vs mean depth
+        expand('output/gc_depth/svg/{species}_gc_depth.svg', species=all_species)
+
+#######################
+## GC vs depth table ##
+#######################
+
+rule plot_depth:
+    input:
+        gc_table = 'output/gc_depth/{species}/gc_table.csv',
+        coverage_file = 'output/samtools_coverage/{species}/coverage.out'
+    output:
+        depth_boxplot = 'output/gc_depth/{species}/depth_boxplot.pdf',
+        gc_depth_table = 'output/gc_depth/{species}/gc_vs_depth_table.csv'
+    log:
+        'output/logs/gc_depth/{species}_plot_depth.log'
+    script:
+        'src/plot_depth.R'
 
 #################################
 ## sequencing depth of contigs ##
@@ -61,23 +75,23 @@ rule target:
 
 rule samtools_coverage:
     input:
-        sorted_bam = 'output/samtools/{species}/sorted.bam.bai'
+        bam = 'output/samtools/{species}/sorted.bam'
     output:
-        depth_out = 'output/samtools_coverage/{species}/coverage.out'
+        coverage_out = 'output/samtools_coverage/{species}/coverage.out'
     log:
         'output/logs/samtools_coverage_{species}.log'
     threads:
         20
     shell:
         'samtools coverage '
-        '{input.sorted_bam} '
-        '-o {output.depth_out} '
+        '{input.bam} '
+        '-o {output.coverage_out} '
         '2> {log}'
 
 ##include -a option - to print all positions even if depth = 0
 rule samtools_depth:
     input:
-        sorted_bam = 'output/samtools/{species}/sorted.bam.bai'
+        sorted_bam = 'output/samtools/{species}/sorted.bam'
     output:
         depth_out = 'output/samtools_depth/{species}/depth.out'
     log:
@@ -93,7 +107,7 @@ rule samtools_depth:
 
 rule samtools_index:
     input:
-        sam = 'output/samtools/{species}/sorted.bam'
+        bam = 'output/samtools/{species}/sorted.bam'
     output:
         index = 'output/samtools/{species}/sorted.bam.bai'
     log:
@@ -102,7 +116,7 @@ rule samtools_index:
         20
     shell:
         'samtools index '
-        '{input.sam} '
+        '{input.bam} '
         '2> {log}'
 
 rule samtools_sort:
@@ -223,18 +237,21 @@ rule bbduk_filter_dna:
 ## GC content of contigs ##
 ###########################
 
+##only run busco if Hi-C scaffold list not available
+ruleorder: plot_GC_content_hic > plot_GC_content_not_hic
+
 rule plot_GC_content_not_hic:
     input:
         gc = 'output/bb_stats/{not_hic_species}/gc.txt',
         gc_hist = 'output/bb_stats/{not_hic_species}/gc_hist.out',
-        viral_contig_list = 'output/nr_analysis_{not_hic_species}/{not_hic_species}_viral_scaffold_counts.csv',
-        busco = 'output/busco/{not_hic_species}/full_table_{not_hic_species}.tsv'
+        viral_contig_list = 'data/viral_contig_lists/{not_hic_species}.csv',
+        busco = 'output/busco/{not_hic_species}/run_hymenoptera_odb10/full_table.tsv'
     output:
-        hic_only = 'output/bbstats/not_hic/{not_hic_species}_hic_gc_boxplot.pdf',
-        all_contigs = 'output/bbstats/not_hic/{not_hic_species}_all_gc_boxplot.pdf',
-        gc_histogram = 'output/bbstats/not_hic/{not_hic_species}_gc_histogram.pdf'
+        busco_only = 'output/gc_depth/{not_hic_species}/busco_gc_boxplot.pdf',
+        gc_histogram = 'output/gc_depth/{not_hic_species}/gc_histogram.pdf',
+        gc_table = 'output/gc_depth/{not_hic_species}/gc_table.csv'
     log:
-        'output/logs/bbstats/{not_hic_species}_plot_gc.log'
+        'output/logs/gc_depth/{not_hic_species}_plot_gc.log'
     script:
         'src/plot_GC_content_not_hic.R'
 
@@ -242,14 +259,14 @@ rule plot_GC_content_hic:
     input:
         gc = 'output/bb_stats/{hic_species}/gc.txt',
         gc_hist = 'output/bb_stats/{hic_species}/gc_hist.out',
-        viral_contig_list = 'output/nr_analysis_{hic_species}/{hic_species}_viral_scaffold_counts.csv',
+        viral_contig_list = 'data/viral_contig_lists/{hic_species}.csv',
         hic_scaffold_list = 'data/hi-c_genomes/{hic_species}_hic_scaffold_ids.txt'
     output:
-        hic_only = 'output/bbstats/hic/{hic_species}_hic_gc_boxplot.pdf',
-        all_contigs = 'output/bbstats/hic/{hic_species}_all_gc_boxplot.pdf',
-        gc_histogram = 'output/bbstats/hic/{hic_species}_gc_histogram.pdf'
+        hic_only = 'output/gc_depth/{hic_species}/hic_gc_boxplot.pdf',
+        gc_histogram = 'output/gc_depth/{hic_species}/gc_histogram.pdf',
+        gc_table = 'output/gc_depth/{hic_species}/gc_table.csv'
     log:
-        'output/logs/bbstats/{hic_species}_plot_gc.log'
+        'output/logs/gc_depth/{hic_species}_plot_gc.log'
     script:
         'src/plot_GC_content_hic.R'
 
