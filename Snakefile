@@ -46,8 +46,7 @@ rule target:
         expand('output/gc_depth/{hic_species}/hic_gc_boxplot.pdf', hic_species=['Mh', 'IR']),
         expand('output/gc_depth/{not_hic_species}/busco_gc_boxplot.pdf', not_hic_species=['MO', 'FR']),
         expand('output/gc_stats/{species}/kruskal_res.txt', species=['MO', 'FR', 'Mh']),
-        expand('output/depth_stats/{species}/kruskal_res.txt', species=['MO', 'FR', 'Mh']),
-        expand('output/depth_analysis/{species}_boxplot_y_zoom.pdf', species=['MO', 'FR', 'Mh'])
+        expand('output/depth_stats/{species}/kruskal_res.txt', species=['MO', 'FR', 'Mh'])
 
 #######################
 ## GC vs depth table ##
@@ -109,21 +108,6 @@ rule samtools_coverage:
         '{input.bam} '
         '-o {output.coverage_out} '
         '2> {log}'
-
-##don't work because MO and FR have so many contigs (3000+), for Mh shows much the same as scatterplot
-rule depth_boxplot:
-    input:
-        samtools_depth = 'output/samtools_depth/{species}/depth.out',
-        gc_depth_table = 'output/gc_depth/{species}/gc_vs_depth_table.csv'
-    output:
-        boxplot = 'output/depth_analysis/{species}_boxplot.jpeg',
-        boxplot_y_zoom = 'output/depth_analysis/{species}_boxplot_y_zoom.pdf'
-    threads:
-        20
-    log:
-        'output/logs/boxplots/{species}_depth_boxplot.log'
-    script:
-        'src/depth_boxplot.R'
 
 ##include -a option - to print all positions even if depth = 0
 rule samtools_depth:
