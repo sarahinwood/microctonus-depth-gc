@@ -11,6 +11,8 @@ fr_gc_depth_table <- fread('output/gc_depth/FR/gc_vs_depth_table.csv')
 
 ##remove other
 gc_depth_plot <- subset(gc_depth_table, !(plot_label=="Other contig"))
+##order BUSCO contigs
+gc_depth_plot$plot_label <- factor(gc_depth_plot$plot_label, levels=c("BUSCO contig", "BUSCO and viral", "Viral contig"))
 
 ##mean depth boxplot
 depth_plot <- ggplot(gc_depth_plot, aes(x=plot_label, y=meandepth, colour=plot_label))+
@@ -44,7 +46,7 @@ gc_plot <- ggplot(gc_depth_plot, aes(x=plot_label, y=GC, colour=plot_label))+
   coord_flip()
 
 ##scatterplot
-scatterplot <- ggplot(gc_depth_plot %>% arrange(plot_label), aes(x=GC, y=meandepth, colour=plot_label)) +
+scatterplot <- ggplot(gc_depth_plot %>% arrange(plot_label), aes(x=GC, y=meandepth, colour=plot_label, size=Length, alpha=0.7)) +
   geom_point()+
   scale_colour_viridis(discrete=TRUE, direction = -1)+
   theme_bw()+

@@ -32,7 +32,6 @@ bbduk_ref = '/phix174_ill.ref.fa.gz'
 # CONTAINERS #
 ##############
 
-tom_tidyverse_container = 'shub://TomHarrop/singularity-containers:r_3.5.0'
 busco_container = 'docker://ezlabgva/busco:v4.0.2_cv1'
 tidyverse_container = 'docker://rocker/tidyverse'
 bbduk_container = 'shub://TomHarrop/singularity-containers:bbmap_38.00'
@@ -43,19 +42,42 @@ bbduk_container = 'shub://TomHarrop/singularity-containers:bbmap_38.00'
 
 rule target:
     input:
-        ##Depth
-        expand('output/samtools_depth/{species}/depth.out', species=all_species),
-        ##Coverage
-        expand('output/samtools_coverage/{species}/coverage.out', species=all_species),
-        ##GC content plots
+       ##GC content plots
         expand('output/gc_depth/{hic_species}/hic_gc_boxplot.pdf', hic_species=['Mh', 'IR']),
         expand('output/gc_depth/{not_hic_species}/busco_gc_boxplot.pdf', not_hic_species=['MO', 'FR']),
-        ##GC vs mean depth
-        expand('output/gc_depth/svg/{species}_gc_depth.svg', species=all_species)
+        expand('output/gc_stats/{species}/kruskal_res.txt', species=['MO', 'FR', 'Mh']),
+        expand('output/depth_stats/{species}/kruskal_res.txt', species=['MO', 'FR', 'Mh']),
+        expand('output/depth_analysis/{species}_boxplot_y_zoom.pdf', species=['MO', 'FR', 'Mh'])
 
 #######################
 ## GC vs depth table ##
 #######################
+
+rule depth_stat_test:
+    input:
+        gc_depth_table = 'output/gc_depth/{species}/gc_vs_depth_table.csv'
+    output:
+        shapiro_res = 'output/depth_stats/{species}/gc_shapiro_res.txt',
+        summary_stats = 'output/depth_stats/{species}/summary_stats.txt',
+        kruskal_res = 'output/depth_stats/{species}/kruskal_res.txt',
+        wilcox_res = 'output/depth_stats/{species}/wilcox_res.txt'
+    log:
+        'output/logs/gc_depth_stats/{species}_depth_stats.log'
+    script:
+        'src/depth_stat_test.R'
+
+rule GC_stat_test:
+    input:
+        gc_depth_table = 'output/gc_depth/{species}/gc_vs_depth_table.csv'
+    output:
+        shapiro_res = 'output/gc_stats/{species}/gc_shapiro_res.txt',
+        summary_stats = 'output/gc_stats/{species}/summary_stats.txt',
+        kruskal_res = 'output/gc_stats/{species}/kruskal_res.txt',
+        wilcox_res = 'output/gc_stats/{species}/wilcox_res.txt'
+    log:
+        'output/logs/gc_depth_stats/{species}_gc_stats.log'
+    script:
+        'src/GC_stat_test.R'
 
 rule plot_depth:
     input:
@@ -87,6 +109,21 @@ rule samtools_coverage:
         '{input.bam} '
         '-o {output.coverage_out} '
         '2> {log}'
+
+##don't work because MO and FR have so many contigs (3000+), for Mh shows much the same as scatterplot
+rule depth_boxplot:
+    input:
+        samtools_depth = 'output/samtools_depth/{species}/depth.out',
+        gc_depth_table = 'output/gc_depth/{species}/gc_vs_depth_table.csv'
+    output:
+        boxplot = 'output/depth_analysis/{species}_boxplot.jpeg',
+        boxplot_y_zoom = 'output/depth_analysis/{species}_boxplot_y_zoom.pdf'
+    threads:
+        20
+    log:
+        'output/logs/boxplots/{species}_depth_boxplot.log'
+    script:
+        'src/depth_boxplot.R'
 
 ##include -a option - to print all positions even if depth = 0
 rule samtools_depth:
@@ -243,9 +280,9 @@ ruleorder: plot_GC_content_hic > plot_GC_content_not_hic
 rule plot_GC_content_not_hic:
     input:
         gc = 'output/bb_stats/{not_hic_species}/gc.txt',
-        gc_hist = 'output/bb_stats/{not_hic_species}/gc_hist.out',
+        gc_hist_file = 'output/bb_stats/{not_hic_species}/gc_hist.out',
         viral_contig_list = 'data/viral_contig_lists/{not_hic_species}.csv',
-        busco = 'output/busco/{not_hic_species}/run_hymenoptera_odb10/full_table.tsv'
+        busco_results_file = 'output/busco/{not_hic_species}/run_hymenoptera_odb10/full_table.tsv'
     output:
         busco_only = 'output/gc_depth/{not_hic_species}/busco_gc_boxplot.pdf',
         gc_histogram = 'output/gc_depth/{not_hic_species}/gc_histogram.pdf',

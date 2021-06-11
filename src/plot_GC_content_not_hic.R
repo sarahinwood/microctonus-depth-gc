@@ -22,9 +22,9 @@ library(viridis)
 ###########
 
 gc <- snakemake@input[['gc']]
-gc_hist_file <- snakemake@input[['gc_hist']]
+gc_hist_file <- snakemake@input[['gc_hist_file']]
 viral_contig_list <- snakemake@input[['viral_contig_list']]
-busco_results_file <- snakemake@input[['busco']]
+busco_results_file <- snakemake@input[['busco_results_file']]
 
 ########
 # MAIN #
@@ -39,6 +39,7 @@ viral_contigs <- fread(viral_contig_list)
 busco_res <- fread(busco_results_file, header=TRUE, fill=TRUE, skip = 2)
 busco_res$contig_id <- tstrsplit(busco_res$Sequence, ":", keep=c(1))
 busco_contigs <- busco_res$contig_id
+viral_busco <- intersect(viral_contigs$contig_id, busco_contigs)
 
 ##GC histogram
 pdf(snakemake@output[["gc_histogram"]])
@@ -50,10 +51,11 @@ ggplot(gc_hist, aes(x=gc_hist$`#GC`, y=scaffolds))+
   theme_classic()
 dev.off()
 
-gc_content_table$plot_label <- ifelse(gc_content_table$`#Name` %in% viral_contigs$contig_id, 'Viral contig',
-                                             ifelse(gc_content_table$`#Name` %in% busco_contigs, 'BUSCO contig', 'Other contig'))
+gc_content_table$plot_label <- ifelse(gc_content_table$`#Name` %in% viral_busco, 'BUSCO and viral',
+                                      ifelse(gc_content_table$`#Name` %in% viral_contigs$contig_id, 'Viral contig',
+                                             ifelse(gc_content_table$`#Name` %in% busco_contigs, 'BUSCO contig', 'Other contig')))
 
-gc_content_table$plot_label <- factor(gc_content_table$plot_label, levels=c("BUSCO contig", "Viral contig", "Other contig"))
+gc_content_table$plot_label <- factor(gc_content_table$plot_label, levels=c("BUSCO contig", "BUSCO and viral", "Viral contig", "Other contig"))
 
 ##make plot without others for hic assemblies
 busco_plot_table <- subset(gc_content_table, !(plot_label=="Other contig"))
