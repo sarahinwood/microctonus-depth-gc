@@ -34,6 +34,7 @@ bbduk_ref = '/phix174_ill.ref.fa.gz'
 
 busco_container = 'docker://ezlabgva/busco:v4.0.2_cv1'
 tidyverse_container = 'docker://rocker/tidyverse'
+tom_tidyverse_container = 'shub://TomHarrop/singularity-containers:r_3.5.0'
 bbduk_container = 'shub://TomHarrop/singularity-containers:bbmap_38.00'
 
 #########
@@ -46,7 +47,37 @@ rule target:
         expand('output/gc_depth/{hic_species}/hic_gc_boxplot.pdf', hic_species=['Mh', 'IR']),
         expand('output/gc_depth/{not_hic_species}/busco_gc_boxplot.pdf', not_hic_species=['MO', 'FR']),
         expand('output/gc_stats/{species}/kruskal_res.txt', species=['MO', 'FR', 'Mh']),
-        expand('output/depth_stats/{species}/kruskal_res.txt', species=['MO', 'FR', 'Mh'])
+        expand('output/depth_stats/{species}/kruskal_res.txt', species=['MO', 'FR', 'Mh']),
+        'output/Mh_depth_plot/Mh_boxplot.jpeg'
+
+######################
+## Mh depth boxplot ##
+######################
+
+rule depth_boxplot:
+    input:
+        samtools_depth = 'output/samtools_depth/Mh/filtered_Mh_depth.out',
+        scaffold_id_table = 'data/Mh_contig_ids/Mh_gc_table.csv'
+    output:
+        boxplot_y_zoom = 'output/Mh_depth_plot/Mh_boxplot_y_zoom.pdf',
+        boxplot = 'output/Mh_depth_plot/Mh_boxplot.jpeg'
+    singularity:
+        tom_tidyverse_container
+    threads:
+        20
+    log:
+        'output/logs/boxplots/Mh_depth_boxplot.log'
+    script:
+        'src/Mh_depth_boxplot.R'
+
+rule filter_depth_file:
+    input:
+        depth_out = 'output/samtools_depth/Mh/depth.out',
+        viral_hic_ids_list = 'data/Mh_contig_ids/Mh_hic_contig_ids.txt'
+    output:
+        filtered_depth = 'output/samtools_depth/Mh/filtered_Mh_depth.out'
+    shell:
+        'egrep -wf {input.viral_hic_ids_list} {input.depth_out} > {output.filtered_depth}'
 
 #######################
 ## GC vs depth table ##
@@ -81,7 +112,8 @@ rule GC_stat_test:
 rule plot_depth:
     input:
         gc_table = 'output/gc_depth/{species}/gc_table.csv',
-        coverage_file = 'output/samtools_coverage/{species}/coverage.out'
+        coverage_file = 'output/samtools_coverage/{species}/coverage.out',
+        viral_genome_table = 'data/viral_genome_contig_tables/{species}.csv'
     output:
         depth_boxplot = 'output/gc_depth/{species}/depth_boxplot.pdf',
         gc_depth_table = 'output/gc_depth/{species}/gc_vs_depth_table.csv'

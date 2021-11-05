@@ -5,19 +5,27 @@ library(viridis)
 library(gridExtra)
 library(EnvStats)
 
-mh_gc_depth_table <- fread('output/gc_depth/Mh/gc_vs_depth_table.csv')
-mo_gc_depth_table <- fread('output/gc_depth/MO/gc_vs_depth_table.csv')
-fr_gc_depth_table <- fread('output/gc_depth/FR/gc_vs_depth_table.csv')
+mh_gc_depth_table <- fread('output/gc_depth/Mh/gc_vs_depth_table.csv', na.strings = "")
+mo_gc_depth_table <- fread('output/gc_depth/MO/gc_vs_depth_table.csv', na.strings = "")
+fr_gc_depth_table <- fread('output/gc_depth/FR/gc_vs_depth_table.csv', na.strings = "")
 
 ##remove other
-gc_depth_plot <- subset(gc_depth_table, !(plot_label=="Other contig"))
+gc_depth_plot_final <- subset(gc_depth_table, !(plot_label=="Other contig"))
 ##for MH only
-#gc_depth_plot$plot_label <- tstrsplit(gc_depth_plot$plot_label, " and viral", keep=c(1))
+#gc_depth_plot_final$plot_label <- tstrsplit(gc_depth_plot_final$plot_label, " and viral", keep=c(1))
+
+## for aethiopoides ##
+##remove RNA viruses
+gc_depth_plot_final <- subset(gc_depth_plot, (viral_genome=="DNA" | is.na(viral_genome)))
 ##order BUSCO contigs
 gc_depth_plot$plot_label <- factor(gc_depth_plot$plot_label, levels=c("BUSCO contig", "BUSCO and viral", "Viral contig"))
 
+##########
+## plot ##
+##########
+
 ##mean depth boxplot
-depth_plot <- ggplot(gc_depth_plot, aes(x=plot_label, y=meandepth, colour=plot_label, alpha=0.7))+
+depth_plot <- ggplot(gc_depth_plot_final, aes(x=plot_label, y=meandepth, colour=plot_label, alpha=0.7))+
   geom_boxplot()+
   scale_colour_viridis(discrete=TRUE, direction = -1)+
   theme_bw()+
@@ -31,7 +39,7 @@ depth_plot <- ggplot(gc_depth_plot, aes(x=plot_label, y=meandepth, colour=plot_l
         axis.text.y=element_blank())
 
 ##gc boxplot
-gc_plot <- ggplot(gc_depth_plot, aes(x=plot_label, y=GC, colour=plot_label, alpha=0.7))+
+gc_plot <- ggplot(gc_depth_plot_final, aes(x=plot_label, y=GC, colour=plot_label, alpha=0.7))+
   geom_boxplot()+
   stat_n_text(y.pos = 0.19, hjust=0)+
   scale_colour_viridis(discrete=TRUE, direction = -1)+
@@ -48,7 +56,7 @@ gc_plot <- ggplot(gc_depth_plot, aes(x=plot_label, y=GC, colour=plot_label, alph
   coord_flip()
 
 ##scatterplot
-scatterplot <- ggplot(gc_depth_plot %>% arrange(plot_label), aes(x=GC, y=meandepth, colour=plot_label, alpha=0.7)) +
+scatterplot <- ggplot(gc_depth_plot_final %>% arrange(plot_label), aes(x=GC, y=meandepth, colour=plot_label, alpha=0.7)) +
   geom_point()+
   scale_colour_viridis(discrete=TRUE, direction = -1)+
   theme_bw()+
@@ -76,7 +84,7 @@ blankplot <- ggplot()+geom_blank(aes(1,1))+
 
 ##arrange in grid
 all_plots <- grid.arrange(gc_plot, blankplot, scatterplot, depth_plot, 
-             ncol=2, nrow=2, widths=c(2.5, 0.5), heights=c(0.5, 2.5))
+                          ncol=2, nrow=2, widths=c(2.5, 0.5), heights=c(0.5, 2.5))
 
 ##save as svg and fix in inkscape
-ggsave(file="output/gc_depth/svg/mo_gc_depth.svg", plot=all_plots, width=5, height=5)
+ggsave(file="output/gc_depth/svg_dna/mh_DNA_gc_depth.svg", plot=all_plots, width=5, height=5)

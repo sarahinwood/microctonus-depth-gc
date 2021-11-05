@@ -23,6 +23,7 @@ library(viridis)
 
 gc_table_file <- snakemake@input[["gc_table"]]
 coverage_file <- snakemake@input[["coverage_file"]]
+viral_genome_table <- snakemake@input[["viral_genome_table"]]
 
 ########
 # MAIN #
@@ -30,9 +31,12 @@ coverage_file <- snakemake@input[["coverage_file"]]
 
 gc_table <- fread(gc_table_file)
 coverage <- fread(coverage_file)
+viral_genome_type <- fread(viral_genome_table)
+
+gc_table_virus <- merge(gc_table, viral_genome_type, by.x="#Name", by.y="contig_id", all.x=TRUE)
 
 depth_table <- coverage[,c(1,7)]
-gc_depth <- merge(gc_table, depth_table, by.x="#Name", by.y="#rname")
+gc_depth <- merge(gc_table_virus, depth_table, by.x="#Name", by.y="#rname")
 gc_depth_plot <- gc_depth[order(-plot_label)]
 
 ##remove other
