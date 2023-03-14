@@ -11,6 +11,7 @@ fr_gc_depth_table <- fread('output/gc_depth/FR/gc_vs_depth_table.csv')
 
 ##remove other
 gc_depth_plot <- subset(gc_depth_table, !(plot_label=="Other contig"))
+gc_depth_plot <- subset(gc_depth_table, !(viral_genome=="RNA"))
 ##for MH only
 #gc_depth_plot$plot_label <- tstrsplit(gc_depth_plot$plot_label, " and viral", keep=c(1))
 ##order BUSCO contigs
@@ -79,4 +80,4 @@ all_plots <- grid.arrange(gc_plot, blankplot, scatterplot, depth_plot,
              ncol=2, nrow=2, widths=c(2.5, 0.5), heights=c(0.5, 2.5))
 
 ##save as svg and fix in inkscape
-ggsave(file="output/gc_depth/svg/mo_gc_depth.svg", plot=all_plots, width=5, height=5)
+ggsave(file="output/gc_depth/svg/new_mo_gc_depth.svg", plot=all_plots, width=5, height=5)

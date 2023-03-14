@@ -56,10 +56,8 @@ pdf(snakemake@output[["boxplot_y_zoom"]])
 ggplot(st_depth_boxpl, aes(x=reorder(`#Name`, scaffold_number), y=depth, colour=plot_group))+
   geom_boxplot(outlier.shape=NA)+
   theme_bw(base_size=18)+
-  theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        legend.title = element_blank())+
+  theme(legend.title = element_blank(),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
   xlab("")+
   ylab("Sequencing depth")+
   stat_summary(fun=mean, geom="point", colour="grey35")+

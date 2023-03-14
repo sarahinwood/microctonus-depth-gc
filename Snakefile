@@ -298,7 +298,7 @@ rule plot_GC_content_not_hic:
         gc = 'output/bb_stats/{not_hic_species}/gc.txt',
         gc_hist_file = 'output/bb_stats/{not_hic_species}/gc_hist.out',
         viral_contig_list = 'data/viral_contig_lists/{not_hic_species}.csv',
-        busco_results_file = 'output/busco/{not_hic_species}/run_hymenoptera_odb10/full_table.tsv'
+        busco_results_file = 'data/new_busco/{not_hic_species}/busco/run_hymenoptera_odb10/full_table.tsv'
     output:
         busco_only = 'output/gc_depth/{not_hic_species}/busco_gc_boxplot.pdf',
         gc_histogram = 'output/gc_depth/{not_hic_species}/gc_histogram.pdf',
@@ -341,36 +341,3 @@ rule bb_stats:
         'gc={output.gc} '
         'gcformat=4 '
         'gchist={output.gc_hist} '
-
-########################################
-## BUSCO for ID of eukaryotic contigs ##
-########################################
-
-##for two assemblies without hi-c need busco to compare busco containing to viral
-rule busco_non_hic_genomes:
-    input:
-        genome = 'data/final_genomes/{not_hic_species}.fa'
-    output:
-        'output/busco/{not_hic_species}/run_hymenoptera_odb10/full_table.tsv'
-    log:
-        str(pathlib2.Path(resolve_path('output/logs/'),
-                            'busco_{not_hic_species}.log'))
-    params:
-        wd = 'output/busco',
-        genome = lambda wildcards, input: resolve_path(input.genome)
-    singularity:
-        busco_container
-    threads:
-        20
-    shell:
-        'cd {params.wd} || exit 1 ; '
-        'busco '
-        '--force '
-        '--in {params.genome} '
-        '--out {wildcards.not_hic_species} '
-        '--lineage hymenoptera_odb10 '
-        '--augustus_species nasonia '
-        '--cpu {threads} '
-        '--mode genome '
-        '-f '
-        '&> {log} '
